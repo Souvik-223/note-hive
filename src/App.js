@@ -7,10 +7,13 @@ import {nanoid} from "nanoid"
 import './App.css';
 
 export default function App() {
-    const [notes, setNotes] = React.useState([])
+    const [notes, setNotes] = React.useState(() => JSON.parse(localStorage.getItem("n"))  || [])
     const [currentNoteId, setCurrentNoteId] = React.useState(
         (notes[0] && notes[0].id) || ""
     )
+    React.useEffect(() => {
+        localStorage.setItem("n",JSON.stringify(notes))
+    },[notes])
     
     function createNewNote() {
         const newNote = {
@@ -22,11 +25,22 @@ export default function App() {
     }
     
     function updateNote(text) {
-        setNotes(oldNotes => oldNotes.map(oldNote => {
-            return oldNote.id === currentNoteId
-                ? { ...oldNote, body: text }
-                : oldNote
-        }))
+        // This rearranges the notes whenever a new note is updated it goes to the top of the array
+        setNotes(oldNotes => {
+            const newarr=[];
+            for (let i = 0; i < oldNotes.length; i++) {
+                let oldNote = oldNotes[i]
+                if (oldNote.id === currentNoteId) {
+                    newarr.unshift({ ...oldNote, body: text })
+                }
+                else{newarr.push(oldNote)}
+            }
+            return newarr
+        })
+        // Dosen't rearranges the notes
+        // setNotes(oldNotes => oldNotes.map(oldNote => {
+        //     return oldNote.id === currentNoteId? { ...oldNote, body: text }: oldNote
+        // }))
     }
     
     function findCurrentNote() {
