@@ -2,49 +2,51 @@ import React from "react"
 import Sidebar from "./components/Sidebar"
 import Editor from "./components/Editor"
 import Split from "react-split"
-import {nanoid} from "nanoid"
+import { onSnapshot, addDoc, deleteDoc, setDoc, doc } from "firebase/firestore";
+import { notescollection, db } from "./components/Firebase"
 import './App.css';
 
 export default function App() {
-    const [notes, setNotes] = React.useState(() => JSON.parse(localStorage.getItem("n"))  || [])
+    const [notes, setNotes] = React.useState([])
 
-    const [currentNoteId, setCurrentNoteId] = React.useState(
-        (notes[0]?.id) || ""
-    )
+    const [currentNoteId, setCurrentNoteId] = React.useState("")
     
     const findCurrentNote = notes.find(note => note.id === currentNoteId) || notes[0]
 
     React.useEffect(() => {
-        localStorage.setItem("n",JSON.stringify(notes))
-    },[notes])
+        const unsubscribe = onSnapshot(notescollection ,(snapshot)=>{
+            const notesArr = snapshot.docs.map(doc => ({
+                ...doc.data(),
+                id: doc.id
+            }))
+            setNotes(notesArr)
+        })
+        return unsubscribe
+    },[])
+
+
+    React.useEffect(() => {
+        if (!currentNoteId) {
+            setCurrentNoteId(notes[0]?.id)
+        }
+    }, [notes])
     
-    function createNewNote() {
+    async function createNewNote() {
         const newNote = {
-            id: nanoid(),
             body: "# Type your markdown note's title here"
         }
-        setNotes(prevNotes => [newNote, ...prevNotes])
-        setCurrentNoteId(newNote.id)
+        const newNoteRef = await addDoc(notescollection, newNote)
+        setCurrentNoteId(newNoteRef.id)
     }
     
-    function updateNote(text) {
-        // This rearranges the notes whenever a new note is updated it goes to the top of the array
-        setNotes(oldNotes => {
-            const newarr=[];
-            for (let i = 0; i < oldNotes.length; i++) {
-                let oldNote = oldNotes[i]
-                if (oldNote.id === currentNoteId) {
-                    newarr.unshift({ ...oldNote, body: text })
-                }
-                else{newarr.push(oldNote)}
-            }
-            return newarr
-        })
+    async function updateNote(text) {
+        const docRef = doc(db, "notes", currentNoteId)
+        await setDoc(docRef, { body: text }, { merge: true })
     }
 
-    function deleteNote(event, noteId) {
-        event.stopPropagation()
-        setNotes((oldNote)=> oldNote.filter(note => note.id !== noteId))
+    async function deleteNote(noteId) {
+        const docRef = doc(db, "notes", noteId)
+        await deleteDoc(docRef)
     }
 
     
@@ -65,14 +67,10 @@ export default function App() {
                     newNote={createNewNote}
                     deleteNote={deleteNote}
                 />
-                {
-                    currentNoteId && 
-                    notes.length > 0 &&
                     <Editor 
                         currentNote={findCurrentNote} 
                         updateNote={updateNote} 
                     />
-                }
             </Split>
             :
             <div className="no-notes">
