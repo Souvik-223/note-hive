@@ -1,16 +1,19 @@
 import React from "react"
 import Sidebar from "./components/Sidebar"
 import Editor from "./components/Editor"
-import { data } from "./components/data"
 import Split from "react-split"
 import {nanoid} from "nanoid"
 import './App.css';
 
 export default function App() {
     const [notes, setNotes] = React.useState(() => JSON.parse(localStorage.getItem("n"))  || [])
+
     const [currentNoteId, setCurrentNoteId] = React.useState(
-        (notes[0] && notes[0].id) || ""
+        (notes[0]?.id) || ""
     )
+    
+    const findCurrentNote = notes.find(note => note.id === currentNoteId) || notes[0]
+
     React.useEffect(() => {
         localStorage.setItem("n",JSON.stringify(notes))
     },[notes])
@@ -37,10 +40,6 @@ export default function App() {
             }
             return newarr
         })
-        // Dosen't rearranges the notes
-        // setNotes(oldNotes => oldNotes.map(oldNote => {
-        //     return oldNote.id === currentNoteId? { ...oldNote, body: text }: oldNote
-        // }))
     }
 
     function deleteNote(event, noteId) {
@@ -48,11 +47,6 @@ export default function App() {
         setNotes((oldNote)=> oldNote.filter(note => note.id !== noteId))
     }
 
-    function findCurrentNote() {
-        return notes.find(note => {
-            return note.id === currentNoteId
-        }) || notes[0]
-    }
     
     return (
         <main>
@@ -66,7 +60,7 @@ export default function App() {
             >
                 <Sidebar
                     notes={notes}
-                    currentNote={findCurrentNote()}
+                    currentNote={findCurrentNote}
                     setCurrentNoteId={setCurrentNoteId}
                     newNote={createNewNote}
                     deleteNote={deleteNote}
@@ -75,7 +69,7 @@ export default function App() {
                     currentNoteId && 
                     notes.length > 0 &&
                     <Editor 
-                        currentNote={findCurrentNote()} 
+                        currentNote={findCurrentNote} 
                         updateNote={updateNote} 
                     />
                 }
